@@ -1,1 +1,5 @@
 .idea
+
+tests/manual_test
+
+github_user_language_analyzer/__pycache__
