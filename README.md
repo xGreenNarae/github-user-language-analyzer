@@ -10,7 +10,16 @@ test 환경: macos, zsh
 
 ## 사용법
 
-...
+```zsh
+git clone https://github.com/xGreenNarae/github-user-language-analyzer.git  
+
+cd github-user-language-analyzer  
+
+poetry install  
+
+poetry run python ./github_user_language_analyzer/main.py <github-user-name> <github-token>  
+
+```
 
 
 ## 원리
