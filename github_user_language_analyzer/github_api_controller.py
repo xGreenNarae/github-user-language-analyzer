@@ -1,52 +1,58 @@
-import time
+import asyncio
 
-import requests
+import aiohttp
 
 
 class GitHubApiController:
     def __init__(self, token):
         self.token = token
 
-    def gh_get(self, url):
+    async def gh_get(self, url):
         headers = {'Authorization': f'Bearer {self.token}'}
 
         # 실행 시간 측정
-        start_time = time.time()
-        response = requests.get(url, headers=headers)
-        end_time = time.time()
+        # import time
+        # start_time = time.time()
 
-        print(f'API 응답 시간: [{url}] {end_time - start_time:.5f}초')
+        response = None
+        async with aiohttp.ClientSession() as session:
+            response = await session.get(url, headers=headers)
+            response = await response.json(content_type=None)
 
-        return response.json()
+        # end_time = time.time()
+        # print(f'API 응답 시간: [{url}] {end_time - start_time:.5f}초')
+
+        return response
 
     #  https://docs.github.com/ko/rest/repos/repos?apiVersion=2022-11-28#list-repositories-for-a-user
-    def get_user_repos(self, username) -> list:
+    async def get_user_repos(self, username) -> list:
         result = []
         page = 1
         # 모든 page를 가져옵니다.
         while True:
-            response = self.gh_get(f'https://api.github.com/users/{username}/repos?page={page}&per_page=100')
+            response = await self.gh_get(f'https://api.github.com/users/{username}/repos?page={page}&per_page=100')
             if not response:  # TODO: 이렇게 구현하면, 레코드가 100개 미만이더라도 불필요한 요청이 추가로 1회씩 들어갑니다.
                 break
             result += response
             page += 1
         return result
 
-    def get_repo_language_stats(self, username, repo_name):
-        return self.gh_get(f'https://api.github.com/repos/{username}/{repo_name}/languages')
+    async def get_repo_language_stats(self, username, repo_name):
+        return await self.gh_get(f'https://api.github.com/repos/{username}/{repo_name}/languages')
 
-    def get_user_language_stats_by_owning_repos(self, username) -> dict:
-        repos = self.get_user_repos(username)
+    async def get_user_language_stats_by_owning_repos(self, username) -> dict:
+        repos = await self.get_user_repos(username)
         language_stats_of_repos = {}
         total_language_stats = {}
         meaningful_repo_count = 0
 
         # 유의미한 총 repo 개수를 계산하고, repo별 language 통계 데이터를 초기화 합니다.
-        for repo in repos:
-            repo_name = repo['name']
-            result = self.get_repo_language_stats(username, repo_name)
+        tasks = [self.get_repo_language_stats(username, repo['name']) for repo in repos]
+        results = await asyncio.gather(*tasks)
 
-            if not result:  # programming language가 하나도 사용되지 않은 repo
+        for repo, result in zip(repos, results):
+            repo_name = repo['name']
+            if not result:
                 continue
 
             language_stats_of_repos[repo_name] = result

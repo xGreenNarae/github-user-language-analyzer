@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import typer
@@ -13,13 +14,17 @@ base_path = os.path.dirname(os.path.abspath(__file__))
 #   2.1 "commit의 언어" 정의
 #   2.2 commit의 통계
 
-def main(username: str, token: str):
+async def main(username: str, token: str):
     github_client = GitHubApiController(token)
 
-    total_language_stats = github_client.get_user_language_stats_by_owning_repos(username)
+    total_language_stats = await github_client.get_user_language_stats_by_owning_repos(username)
 
     render_bar_chart("Language Bar Chart", BarChartData(total_language_stats))
 
 
+def async_app_wrapper(username: str, token: str):
+    asyncio.run(main(username, token))
+
+
 if __name__ == "__main__":
-    typer.run(main)
+    typer.run(async_app_wrapper)
